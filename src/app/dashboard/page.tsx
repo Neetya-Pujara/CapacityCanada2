@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, ArrowUpRight, MessageCircle, UserRound } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, MessageCircle, UserRound } from "lucide-react";
 import { ConversationPrompt } from "@/components/conversation-prompt";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { getCurrentUser } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { getNonprofitProfile } from "@/lib/profile";
 import { AccountLayout } from "@/components/account-layout";
 import { DemoNotice } from "@/components/registration-form";
 import { formatDate } from "@/lib/date-format";
+import { getRecommendedEventsForOrganization } from "@/lib/events";
 
 export default async function DashboardPage() {
   let user;
@@ -48,6 +49,9 @@ export default async function DashboardPage() {
       </WorkspaceLayout>
     );
   }
+  const recommendations = profile.organizationId
+    ? await getRecommendedEventsForOrganization(profile.organizationId, profile)
+    : [];
 
   return (
     <WorkspaceLayout
@@ -66,6 +70,33 @@ export default async function DashboardPage() {
       </div>
 
       <ConversationPrompt />
+
+      <section className="dashboard-recommendations">
+        <div className="dashboard-section-heading">
+          <div><span className="dashboard-kicker">OPPORTUNITIES THAT FIT</span><h2>Recommended for Your Organization</h2></div>
+          <Link href="/events">Explore all events <ArrowUpRight size={15} /></Link>
+        </div>
+        {recommendations.length ? (
+          <div className="dashboard-event-list">
+            {recommendations.map(({ event, reason, categories }) => (
+              <article className="dashboard-event-card" key={event.id}>
+                <div className="dashboard-event-topline">
+                  <span><CalendarDays size={15} />{formatDate(event.startsAt, { month: "short", day: "numeric", year: "numeric" })} · {formatDate(event.startsAt, { hour: "numeric", minute: "2-digit" })} UTC</span>
+                  <div className="event-category-list">{categories.map((category) => <span key={category}>{category}</span>)}</div>
+                </div>
+                <h3><Link href={`/events/${encodeURIComponent(event.id)}`}>{event.title}</Link></h3>
+                <p>{event.summary || event.description.slice(0, 200)}</p>
+                <div className="dashboard-event-footer"><span>{reason}</span><Link href={`/events/${encodeURIComponent(event.id)}`}>View details <ArrowRight size={14} /></Link></div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="dashboard-recommendations-empty">
+            <p>No published events currently match the needs in your organization profile.</p>
+            <Link href="/events">Browse all published events <ArrowRight size={14} /></Link>
+          </div>
+        )}
+      </section>
 
       <section className="dashboard-guidance">
         <span className="dashboard-guidance-mark"><MessageCircle size={18} /></span>

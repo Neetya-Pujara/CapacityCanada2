@@ -124,5 +124,49 @@ export const resourceInputSchema = z.object({
   adminNotes: z.string().trim().max(5000).nullable(),
 });
 
+const optionalHttpUrl = z.string().trim().max(2048).nullable().refine((value) => {
+  if (!value) return true;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}, "Use a valid HTTP or HTTPS URL.");
+
+export const eventInputSchema = z.object({
+  title: z.string().trim().min(2).max(240),
+  summary: z.string().trim().max(500).default(""),
+  description: z.string().trim().min(10).max(12000),
+  categories: z.array(z.enum(SUPPORT_AREAS)).min(1).max(SUPPORT_AREAS.length)
+    .refine((areas) => new Set(areas).size === areas.length, "Remove duplicate categories."),
+  startsAt: z.iso.datetime({ offset: true }),
+  endsAt: z.iso.datetime({ offset: true }),
+  location: z.string().trim().min(2).max(500),
+  registrationUrl: optionalHttpUrl,
+  registrationDeadline: z.string().date().nullable(),
+  imageUrl: optionalHttpUrl,
+  status: z.enum(["DRAFT", "PUBLISHED", "CANCELLED", "ARCHIVED"]),
+}).superRefine((event, context) => {
+  if (new Date(event.endsAt) <= new Date(event.startsAt)) {
+    context.addIssue({
+      code: "custom",
+      path: ["endsAt"],
+      message: "The end time must be after the start time.",
+    });
+  }
+  if (
+    event.registrationDeadline &&
+    new Date(event.registrationDeadline) > new Date(event.startsAt)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["registrationDeadline"],
+      message: "The registration deadline must be before the event starts.",
+    });
+  }
+});
+
 export type NonprofitRegistration = z.infer<typeof nonprofitRegistrationSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+export type EventInput = z.infer<typeof eventInputSchema>;

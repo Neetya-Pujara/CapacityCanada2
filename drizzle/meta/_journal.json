@@ -29,6 +29,13 @@
       "when": 1794128483849,
       "tag": "0003_slow_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794152373856,
+      "tag": "0004_skinny_banshee",
+      "breakpoints": true
     }
   ]
 }

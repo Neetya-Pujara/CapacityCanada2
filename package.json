@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:backfill-needs": "tsx scripts/backfill-organizational-needs.ts",
+    "db:test-needs-intelligence": "tsx scripts/test-needs-intelligence.ts",
+    "db:test-phase8": "tsx scripts/test-phase8-integration.ts",
     "db:seed-admin": "tsx scripts/seed-admin.ts",
     "db:seed-resources": "tsx scripts/seed-resources.ts"
   },

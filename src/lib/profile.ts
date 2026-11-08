@@ -6,6 +6,7 @@ export async function getNonprofitProfile(userId: string) {
   const db = getDb();
   const [profile] = await db
     .select({
+      organizationId: users.organizationId,
       fullName: users.fullName,
       email: users.email,
       username: users.username,

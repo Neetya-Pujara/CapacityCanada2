@@ -9,7 +9,10 @@ import {
   ArrowUpRight,
   BookOpen,
   Building2,
+  CalendarDays,
+  ChartColumnIncreasing,
   ChevronLeft,
+  Bell,
   History,
   LayoutDashboard,
   Menu,
@@ -19,6 +22,7 @@ import {
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { LogoutButton } from "@/components/logout-button";
+import { NotificationCenter } from "@/components/notification-center";
 
 type WorkspaceRole = "NONPROFIT_STAFF" | "CAPACITY_CANADA_ADMIN";
 
@@ -42,18 +46,26 @@ export function WorkspaceLayout({
   const pageTitle =
     pathname === "/admin" ? "Overview" :
       pathname === "/admin/resources" ? "Resource library" :
+      pathname === "/admin/events" ? "Events" :
+      pathname === "/admin/needs-intelligence" ? "Needs Intelligence" :
+      pathname === "/notifications" ? "Notifications" :
       pathname === "/assistant" ? "AI assistant" :
         pathname === "/history" ? "Conversation history" :
+          pathname.startsWith("/events") ? "Events" :
           pathname === "/dashboard" ? "Dashboard" : "Organization profile";
   const navigation: { href: Route; label: string; icon: typeof LayoutDashboard }[] = isAdmin
     ? [
         { href: "/admin", label: "Overview", icon: LayoutDashboard },
+        { href: "/admin/needs-intelligence", label: "Needs Intelligence", icon: ChartColumnIncreasing },
         { href: "/admin/resources", label: "Resource library", icon: BookOpen },
+        { href: "/admin/events", label: "Events", icon: CalendarDays },
       ]
     : [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/assistant", label: "AI assistant", icon: MessageCircle },
         { href: "/history", label: "Conversation history", icon: History },
+        { href: "/events", label: "Events", icon: CalendarDays },
+        { href: "/notifications", label: "Notifications", icon: Bell },
         { href: "/profile", label: "Profile", icon: Building2 },
       ];
   const active = (href: string) =>
@@ -61,6 +73,14 @@ export function WorkspaceLayout({
       ? pathname === "/assistant"
       : href === "/admin"
         ? pathname === "/admin"
+      : href === "/admin/events"
+        ? pathname.startsWith("/admin/events")
+      : href === "/admin/needs-intelligence"
+        ? pathname.startsWith("/admin/needs-intelligence")
+      : href === "/events"
+        ? pathname.startsWith("/events")
+      : href === "/notifications"
+        ? pathname.startsWith("/notifications")
       : pathname === href || (href === "/dashboard" && pathname === "/");
 
   return (
@@ -141,6 +161,7 @@ export function WorkspaceLayout({
             <span>Workspace</span><span className="breadcrumb-slash">/</span><strong>{pageTitle}</strong>
           </div>
           <div className="workspace-top-actions">
+            {!isAdmin && <NotificationCenter />}
             <Link className="workspace-site-link" href={isAdmin ? "/admin" : "/dashboard"}><span>Workspace home</span><ArrowUpRight size={14} /></Link>
             <LogoutButton />
           </div>

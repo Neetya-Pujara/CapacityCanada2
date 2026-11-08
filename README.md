@@ -46,6 +46,8 @@ The configured Tiger Data connection was verified before migration. The initial 
 - `/register` and `/register/nonprofit` — create a Nonprofit Staff account and complete the six-step orientation.
 - `/login` — choose Nonprofit Staff or Capacity Canada Admin; account role is checked against the database. Staff sign in to `/dashboard`.
 - `/dashboard` — personalized workspace with a starting prompt and recent conversations.
+- `/events` — published workshops and capacity-building opportunities for nonprofit staff.
+- `/admin/events` — Capacity Canada Admin event management.
 - `/assistant` — profile-informed Gemini chat; `/history` — reopen or delete saved conversations.
 - `/profile` — view and edit personal details, organization information, and orientation answers.
 - `/admin` — protected Capacity Canada Admin landing page.
@@ -77,9 +79,27 @@ npm run db:seed-resources
 
 The seed script uses stable keys and skips existing records without changing administrator edits. Administrators can search, filter, add, edit, delete, and review verification status at `/admin/resources`. Links credited to other publishers in the Ontario Nonprofit Network library retain the credited source organization in the record.
 
+## Events, recommendations, and notifications
+
+Capacity Canada Admins manage drafts and published events at `/admin/events`. Nonprofit staff can browse published opportunities at `/events`; event dates and times are entered and displayed in UTC. Publishing an event creates one in-app notification per matching staff member. Editing a published event does not resend notifications, and the database uniqueness constraint prevents duplicates if an event is unpublished and republished.
+
+The nonprofit dashboard ranks up to four published events using direct profile support-area matches, active categorized needs, and specific profile/event keywords. Each recommendation includes a plain-language reason. Draft, cancelled, and archived events are excluded. The notification centre displays the signed-in staff member’s persisted read state and links to the event while it remains published.
+
+To verify event matching and notification persistence against the configured Tiger Data database, run `npm run db:test-phase8`. The integration check creates temporary test organizations, staff accounts, and an event, then removes them when it finishes.
+
+Assistant responses are already saved with an **Identified Challenges** section. New responses are parsed and stored as active organizational needs without another model call. To populate needs from existing assistant responses, run the idempotent backfill after applying migrations:
+
+```bash
+npm run db:backfill-needs
+```
+
+The backfill reports the number of saved assistant responses processed, needs inserted, and responses skipped/already represented. It reads only saved database responses; it does not call Gemini.
+
+Capacity Canada Admins can view sector-wide, aggregated need counts and reporting trends at `/admin/needs-intelligence`. The dashboard filters active needs by first-identified date, counts distinct organizations for category demand, and compares recent and previous equivalent periods for emerging needs. To verify the reporting-period queries and calculations against Tiger Data using temporary test organizations, run `npm run db:test-needs-intelligence`.
+
 ## Schema and code layout
 
-- `src/lib/db/schema.ts` defines users, organizations, profiles, sessions, conversations, messages, resources, and resource categories.
+- `src/lib/db/schema.ts` defines users, organizations, profiles, sessions, conversations, messages, resources, events, organizational needs, and notifications.
 - Each nonprofit user references an organization; multiple staff accounts can reference one organization. Each organization has one profile row.
 - `src/lib/db/index.ts` creates the reusable Tiger Data PostgreSQL/Drizzle connection.
 - `src/lib/accounts.ts`, `src/lib/auth.ts`, and `src/lib/profile.ts` contain server-side account, session, and profile operations.

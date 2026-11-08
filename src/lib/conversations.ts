@@ -1,6 +1,10 @@
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { conversationMessages, conversations } from "@/lib/db/schema";
+import {
+  conversationMessages,
+  conversations,
+  organizationalNeeds,
+} from "@/lib/db/schema";
 import { getNonprofitProfile } from "@/lib/profile";
 import {
   generateAssistantReply,
@@ -10,6 +14,10 @@ import {
 } from "@/lib/gemini";
 import { findResourceCandidates } from "@/lib/resources";
 import type { ResourceRecommendationSnapshot } from "@/lib/db/schema";
+import {
+  extractIdentifiedChallenges,
+  sameNeedDescription,
+} from "@/lib/organizational-needs";
 
 const PROCESSING_LEASE_MS = 60 * 1000;
 const MAX_STORED_CONVERSATIONS = 100;
@@ -148,13 +156,14 @@ export async function submitConversationMessage(
   input: SubmitMessageInput,
 ): Promise<SubmitMessageResult> {
   const profile = await getNonprofitProfile(input.userId);
-  if (!profile) {
+  if (!profile || !profile.organizationId) {
     return {
       kind: "failed",
       status: 409,
       error: "Your organization profile is unavailable. Please contact your platform administrator.",
     };
   }
+  const organizationId = profile.organizationId;
 
   const db = getDb();
   const prepared = await db.transaction(async (tx) => {
@@ -424,6 +433,50 @@ export async function submitConversationMessage(
         generationStatus: "COMPLETED",
       })
       .returning();
+    const extractedNeeds = extractIdentifiedChallenges(answer.content);
+    for (const need of extractedNeeds) {
+      const existingNeeds = await tx.select({
+        id: organizationalNeeds.id,
+        conversationId: organizationalNeeds.conversationId,
+        canonicalKey: organizationalNeeds.canonicalKey,
+        challenge: organizationalNeeds.challenge,
+        description: organizationalNeeds.description,
+      })
+        .from(organizationalNeeds)
+        .where(and(
+          eq(organizationalNeeds.organizationId, organizationId),
+          eq(organizationalNeeds.category, need.category),
+        ))
+        .for("update");
+      const duplicate = existingNeeds.find((existing) => sameNeedDescription(existing, need));
+      if (duplicate) {
+        if (!duplicate.conversationId) {
+          await tx.update(organizationalNeeds)
+            .set({ conversationId: ownedConversation.id })
+            .where(and(
+              eq(organizationalNeeds.id, duplicate.id),
+              sql`${organizationalNeeds.conversationId} IS NULL`,
+            ));
+        }
+        continue;
+      }
+      await tx.insert(organizationalNeeds).values({
+        organizationId,
+        conversationId: ownedConversation.id,
+        category: need.category,
+        canonicalKey: need.canonicalKey,
+        challenge: need.description.slice(0, 240),
+        description: need.description,
+        relevantContext: "",
+        status: "ACTIVE",
+      }).onConflictDoNothing({
+        target: [
+          organizationalNeeds.organizationId,
+          organizationalNeeds.category,
+          organizationalNeeds.canonicalKey,
+        ],
+      });
+    }
     const now = new Date();
     await tx
       .update(conversationMessages)
