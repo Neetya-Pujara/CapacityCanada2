@@ -5,6 +5,8 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
+  jsonb,
   text,
   timestamp,
   uniqueIndex,
@@ -36,6 +38,17 @@ export const messageGenerationStatus = pgEnum("message_generation_status", [
   "COMPLETED",
   "FAILED",
 ]);
+
+export type ResourceRecommendationSnapshot = {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  sourceOrganization: string;
+  categories: (typeof supportArea.enumValues)[number][];
+  lastVerifiedAt: string | null;
+  whyRelevant: string;
+};
 
 export const organizations = pgTable("organizations", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -108,6 +121,40 @@ export const organizationProfiles = pgTable(
   ],
 );
 
+export const resources = pgTable(
+  "resources",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: varchar("title", { length: 240 }).notNull(),
+    description: text("description").notNull(),
+    url: varchar("url", { length: 2048 }).notNull(),
+    sourceOrganization: varchar("source_organization", { length: 200 }).notNull(),
+    lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
+    adminNotes: text("admin_notes"),
+    seedKey: varchar("seed_key", { length: 120 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("resources_seed_key_unique_idx").on(table.seedKey),
+    index("resources_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const resourceCategories = pgTable(
+  "resource_categories",
+  {
+    resourceId: uuid("resource_id")
+      .notNull()
+      .references(() => resources.id, { onDelete: "cascade" }),
+    category: supportArea("category").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.resourceId, table.category] }),
+    index("resource_categories_category_idx").on(table.category),
+  ],
+);
+
 export const authSessions = pgTable(
   "auth_sessions",
   {
@@ -160,6 +207,7 @@ export const conversationMessages = pgTable(
     generationStatus: messageGenerationStatus("generation_status")
       .notNull()
       .default("COMPLETED"),
+    resourceRecommendations: jsonb("resource_recommendations").$type<ResourceRecommendationSnapshot[]>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -196,6 +244,17 @@ export const organizationProfilesRelations = relations(organizationProfiles, ({ 
   organization: one(organizations, {
     fields: [organizationProfiles.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+export const resourcesRelations = relations(resources, ({ many }) => ({
+  categories: many(resourceCategories),
+}));
+
+export const resourceCategoriesRelations = relations(resourceCategories, ({ one }) => ({
+  resource: one(resources, {
+    fields: [resourceCategories.resourceId],
+    references: [resources.id],
   }),
 }));
 

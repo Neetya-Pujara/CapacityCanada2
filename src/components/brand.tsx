@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { ArrowUpRight, Menu, Shapes, X } from "lucide-react";
 
-export function Brand({ light = false }: { light?: boolean }) {
+export function Brand({ light = false, href = "/" }: { light?: boolean; href?: Route }) {
   return (
     <Link
-      href="/"
+      href={href}
       className={`brand${light ? " brand-light" : ""}`}
       aria-label="Capacity Connect home"
     >

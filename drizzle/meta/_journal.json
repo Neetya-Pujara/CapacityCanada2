@@ -22,6 +22,13 @@
       "when": 1794125240626,
       "tag": "0002_hard_colossus",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794128483849,
+      "tag": "0003_slow_aqueduct",
+      "breakpoints": true
     }
   ]
 }

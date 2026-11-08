@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, MessageCircle, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/date-format";
 
 export type ConversationListItem = {
   id: string;
@@ -65,7 +66,7 @@ export function ConversationHistoryList({
               <span className="history-item-icon"><MessageCircle size={17} /></span>
               <span className="history-item-copy">
                 <strong>{conversation.title}</strong>
-                <small>Updated {new Date(conversation.updatedAt).toLocaleDateString("en", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}</small>
+                <small>Updated {formatDate(conversation.updatedAt)}</small>
               </span>
               <ArrowUpRight className="history-item-arrow" size={16} />
             </Link>

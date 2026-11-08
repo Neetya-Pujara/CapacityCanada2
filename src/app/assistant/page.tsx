@@ -74,6 +74,7 @@ export default async function AssistantPage({
         initialMessages={initialMessages}
         displayName={user.fullName}
         organizationName={profile.organizationName}
+        key={conversation?.id ?? "new"}
       />
     </WorkspaceLayout>
   );

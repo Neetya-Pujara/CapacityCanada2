@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, HeartHandshake } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { formatYear } from "@/lib/date-format";
 
 export function AccountLayout({
   children,
@@ -44,7 +45,7 @@ export function AccountLayout({
         </div>
         <div className={`account-form-wrap${wide ? " account-form-wrap-wide" : ""}`}>{children}</div>
         <footer className="account-footer">
-          <span>© {new Date().getFullYear()} Capacity Connect</span>
+          <span>© {formatYear()} Capacity Connect</span>
           <Link href="/#how-it-works">How it works <ArrowUpRight size={13} /></Link>
         </footer>
       </section>

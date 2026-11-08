@@ -106,5 +106,23 @@ export const conversationMessageSchema = z.object({
   conversationId: z.string().uuid().optional(),
 });
 
+export const resourceInputSchema = z.object({
+  title: z.string().trim().min(2).max(240),
+  description: z.string().trim().min(10).max(5000),
+  url: z.string().trim().max(2048).refine((value) => {
+    try {
+      const protocol = new URL(value).protocol;
+      return protocol === "https:" || protocol === "http:";
+    } catch {
+      return false;
+    }
+  }, "Use a valid HTTP or HTTPS resource URL."),
+  sourceOrganization: z.string().trim().min(2).max(200),
+  categories: z.array(z.enum(SUPPORT_AREAS)).min(1).max(SUPPORT_AREAS.length)
+    .refine((areas) => new Set(areas).size === areas.length, "Remove duplicate categories."),
+  lastVerifiedAt: z.string().date().nullable(),
+  adminNotes: z.string().trim().max(5000).nullable(),
+});
+
 export type NonprofitRegistration = z.infer<typeof nonprofitRegistrationSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

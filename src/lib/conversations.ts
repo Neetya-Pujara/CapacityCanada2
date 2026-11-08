@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { conversationMessages, conversations } from "@/lib/db/schema";
 import { getNonprofitProfile } from "@/lib/profile";
@@ -8,8 +8,10 @@ import {
   type AssistantHistoryMessage,
   type OrganizationContext,
 } from "@/lib/gemini";
+import { findResourceCandidates } from "@/lib/resources";
+import type { ResourceRecommendationSnapshot } from "@/lib/db/schema";
 
-const PROCESSING_LEASE_MS = 2 * 60 * 1000;
+const PROCESSING_LEASE_MS = 60 * 1000;
 const MAX_STORED_CONVERSATIONS = 100;
 const MAX_HISTORY_MESSAGES = 20;
 
@@ -56,11 +58,24 @@ export async function getUserConversation(userId: string, conversationId: string
     .limit(1);
   if (!conversation) return null;
 
+  await db
+    .update(conversationMessages)
+    .set({ generationStatus: "FAILED", updatedAt: new Date() })
+    .where(
+      and(
+        eq(conversationMessages.conversationId, conversation.id),
+        eq(conversationMessages.sender, "USER"),
+        eq(conversationMessages.generationStatus, "PROCESSING"),
+        lt(conversationMessages.updatedAt, new Date(Date.now() - PROCESSING_LEASE_MS)),
+      ),
+    );
+
   const messages = await db
     .select({
       id: conversationMessages.id,
       sender: conversationMessages.sender,
       content: conversationMessages.content,
+      resourceRecommendations: conversationMessages.resourceRecommendations,
       requestId: conversationMessages.requestId,
       generationStatus: conversationMessages.generationStatus,
       createdAt: conversationMessages.createdAt,
@@ -105,6 +120,7 @@ type CompletedMessageResult = {
     requestId: string | null;
     generationStatus: "COMPLETED";
     createdAt: Date;
+    resourceRecommendations: ResourceRecommendationSnapshot[] | null;
   };
 };
 
@@ -217,6 +233,7 @@ export async function submitConversationMessage(
               requestId: assistantMessage.requestId,
               generationStatus: "COMPLETED" as const,
               createdAt: assistantMessage.createdAt,
+              resourceRecommendations: assistantMessage.resourceRecommendations,
             },
           };
         }
@@ -297,6 +314,7 @@ export async function submitConversationMessage(
     .select({
       sender: conversationMessages.sender,
       content: conversationMessages.content,
+      resourceRecommendations: conversationMessages.resourceRecommendations,
     })
     .from(conversationMessages)
     .where(eq(conversationMessages.conversationId, prepared.conversation.id))
@@ -304,7 +322,14 @@ export async function submitConversationMessage(
     .limit(MAX_HISTORY_MESSAGES + 1);
   const history: AssistantHistoryMessage[] = previousMessages
     .reverse()
-    .map((message) => ({ sender: message.sender, content: message.content }));
+    .map((message) => ({
+      sender: message.sender,
+      content: message.resourceRecommendations?.length
+        ? `${message.content}\n\nPreviously recommended resources (saved conversation snapshot): ${message.resourceRecommendations
+          .map((resource) => `${resource.title} from ${resource.sourceOrganization}: ${resource.whyRelevant}`)
+          .join("; ")}`
+        : message.content,
+    }));
   const context: OrganizationContext = {
     organizationName: profile.organizationName,
     primaryMission: profile.primaryMission,
@@ -316,9 +341,23 @@ export async function submitConversationMessage(
     otherSupportArea: profile.otherSupportArea,
   };
 
-  let answer: string;
+  let answer: Awaited<ReturnType<typeof generateAssistantReply>>;
   try {
-    answer = await generateAssistantReply(context, history);
+    const recentConversation = history
+      .filter((message) => message.sender === "USER")
+      .slice(-5)
+      .map((message) => message.content)
+      .join("\n");
+    const candidates = await findResourceCandidates({
+      profileSupportAreas: profile.supportAreas,
+      organizationContext: [
+        profile.primaryMission,
+        profile.communitiesServed,
+        profile.operationalChallenges,
+      ].join(" "),
+      recentConversation,
+    });
+    answer = await generateAssistantReply(context, history, candidates);
   } catch (error) {
     const serviceError =
       error instanceof GeminiServiceError
@@ -379,7 +418,8 @@ export async function submitConversationMessage(
       .values({
         conversationId: ownedConversation.id,
         sender: "ASSISTANT",
-        content: answer,
+        content: answer.content,
+        resourceRecommendations: answer.resourceRecommendations,
         replyToMessageId: userMessage.id,
         generationStatus: "COMPLETED",
       })
@@ -413,6 +453,7 @@ export async function submitConversationMessage(
         requestId: assistantMessage.requestId,
         generationStatus: "COMPLETED" as const,
         createdAt: assistantMessage.createdAt,
+        resourceRecommendations: assistantMessage.resourceRecommendations,
       },
     };
   });

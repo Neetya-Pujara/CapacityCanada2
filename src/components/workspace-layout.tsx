@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
+  BookOpen,
   Building2,
   ChevronLeft,
   History,
@@ -40,11 +41,15 @@ export function WorkspaceLayout({
   const isAdmin = role === "CAPACITY_CANADA_ADMIN";
   const pageTitle =
     pathname === "/admin" ? "Overview" :
+      pathname === "/admin/resources" ? "Resource library" :
       pathname === "/assistant" ? "AI assistant" :
         pathname === "/history" ? "Conversation history" :
           pathname === "/dashboard" ? "Dashboard" : "Organization profile";
   const navigation: { href: Route; label: string; icon: typeof LayoutDashboard }[] = isAdmin
-    ? [{ href: "/admin", label: "Overview", icon: LayoutDashboard }]
+    ? [
+        { href: "/admin", label: "Overview", icon: LayoutDashboard },
+        { href: "/admin/resources", label: "Resource library", icon: BookOpen },
+      ]
     : [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/assistant", label: "AI assistant", icon: MessageCircle },
@@ -54,6 +59,8 @@ export function WorkspaceLayout({
   const active = (href: string) =>
     href === "/assistant"
       ? pathname === "/assistant"
+      : href === "/admin"
+        ? pathname === "/admin"
       : pathname === href || (href === "/dashboard" && pathname === "/");
 
   return (
@@ -68,7 +75,7 @@ export function WorkspaceLayout({
       )}
       <aside className="workspace-sidebar">
         <div className="workspace-brand-row">
-          <div className="workspace-brand"><Brand /></div>
+          <div className="workspace-brand"><Brand href={isAdmin ? "/admin" : "/dashboard"} /></div>
           <button
             type="button"
             className="workspace-collapse-toggle"
@@ -134,7 +141,7 @@ export function WorkspaceLayout({
             <span>Workspace</span><span className="breadcrumb-slash">/</span><strong>{pageTitle}</strong>
           </div>
           <div className="workspace-top-actions">
-            <Link className="workspace-site-link" href="/"><span>Capacity Connect</span><ArrowUpRight size={14} /></Link>
+            <Link className="workspace-site-link" href={isAdmin ? "/admin" : "/dashboard"}><span>Workspace home</span><ArrowUpRight size={14} /></Link>
             <LogoutButton />
           </div>
         </header>

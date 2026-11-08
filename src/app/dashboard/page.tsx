@@ -9,6 +9,7 @@ import { DatabaseNotConfiguredError } from "@/lib/db";
 import { getNonprofitProfile } from "@/lib/profile";
 import { AccountLayout } from "@/components/account-layout";
 import { DemoNotice } from "@/components/registration-form";
+import { formatDate } from "@/lib/date-format";
 
 export default async function DashboardPage() {
   let user;
@@ -88,7 +89,7 @@ export default async function DashboardPage() {
                 <Link href={`/assistant?conversationId=${encodeURIComponent(conversation.id)}`}>
                   <span><MessageCircle size={17} /></span>
                   <strong>{conversation.title}</strong>
-                  <small>{new Date(conversation.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</small>
+                  <small>{formatDate(conversation.updatedAt, { month: "short", day: "numeric" })}</small>
                   <ArrowUpRight className="dashboard-recent-arrow" size={16} />
                 </Link>
               </li>

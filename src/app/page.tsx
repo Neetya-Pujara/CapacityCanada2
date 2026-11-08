@@ -8,6 +8,7 @@ import {
   MoveUpRight,
 } from "lucide-react";
 import { Brand, SiteHeader } from "@/components/brand";
+import { formatYear } from "@/lib/date-format";
 
 const pillars = [
   {
@@ -114,7 +115,7 @@ export default function HomePage() {
           <div><Brand light /><p>Stronger organizations.<br />More room for good.</p></div>
           <div className="footer-links"><Link href="/#how-it-works">How it works</Link><Link href="/login">Log in</Link><Link href="/register">Get started</Link><a href="https://capacitycanada.ca" target="_blank" rel="noreferrer">Capacity Canada <ArrowUpRight size={13} /></a></div>
         </div>
-        <div className="container footer-bottom"><span>© {new Date().getFullYear()} Capacity Connect</span><span>Built around the people doing good work.</span></div>
+        <div className="container footer-bottom"><span>© {formatYear()} Capacity Connect</span><span>Built around the people doing good work.</span></div>
       </footer>
     </main>
   );
