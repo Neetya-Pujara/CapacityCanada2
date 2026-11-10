@@ -59,13 +59,9 @@ Passwords are hashed server-side with bcrypt before storage. Session tokens are 
 
 ## AI assistant configuration
 
-Set `GEMINI_API_KEY` in `.env.local` to a Google AI Studio API key. Gemini calls are made only from the server with the `@google/genai` SDK and `gemini-3.5-flash-lite`, using a low thinking level, a 1,100-token response limit, and a 30-second request timeout with SDK retries disabled to avoid long waits; the key is never sent to the browser. Organization profile context and conversation messages are read from Tiger Data on the server for the authenticated nonprofit account. Responses are saved in the database, retries reuse an idempotency key, and unfinished requests are marked failed after one minute so they can be retried.
-
 The assistant matches recent conversation context and organization support areas against resources with a verification date less than one year old. Gemini can only select from those database candidates; resource links and details are rendered from database records and saved as snapshots with assistant messages so conversation history remains intact after library edits or deletions. If no suitable verified resources are available, the assistant says so while still providing general strategies.
 
 ## Voice interaction
-
-Set `ELEVENLABS_API_KEY` in `.env.local` to enable voice input and spoken assistant responses. The server uses ElevenLabs Speech to Text with `scribe_v2` and Text to Speech with `eleven_multilingual_v2`; it chooses the first default voice available to the account. Optionally set `ELEVENLABS_VOICE_ID` to select a specific voice instead. These settings are server-only and are never exposed to the browser.
 
 In the assistant, choose **Record voice message**, speak for up to two minutes, and stop to transcribe. The editable transcript appears in the normal message composer and is only sent after you press **Send**. It then uses the existing authenticated conversation endpoint and Gemini pipeline, including organization context, history, resource recommendations, and message persistence. Use **Listen** on an assistant response to generate and play speech; pause, resume, and stop controls are available. Generated audio is cached only in browser memory for that page session and is not stored in the database.
 
